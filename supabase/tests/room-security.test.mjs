@@ -25,12 +25,15 @@ grant usage on schema realtime to authenticated;
 grant select,insert on realtime.messages to authenticated;
 create publication supabase_realtime;
 `);
-await db.exec(
-  fs.readFileSync(
-    new URL("../migrations/202611030001_puzzle_together.sql", import.meta.url),
-    "utf8",
-  ),
-);
+const migrationDirectory = new URL("../migrations/", import.meta.url);
+for (const migration of fs
+  .readdirSync(migrationDirectory)
+  .filter((name) => name.endsWith(".sql"))
+  .sort()) {
+  await db.exec(
+    fs.readFileSync(new URL(migration, migrationDirectory), "utf8"),
+  );
+}
 let assertions = 0;
 const u = Array.from(
   { length: 8 },
@@ -191,6 +194,122 @@ ok(
 );
 await as(u[1]);
 ok(
+  (await val("select public.move_piece($1,0,.5,.5)", [game])) === true,
+  "wrong-but-valid position remains on the shared board",
+);
+let loose = (
+  await q("select * from puzzle_pieces where game_id=$1 and piece_index=0", [
+    game,
+  ])
+)[0];
+ok(
+  loose.current_x === 0.5 && loose.current_y === 0.5 && !loose.is_placed,
+  "loose piece persisted without snapping",
+);
+ok(
+  loose.locked_by === null &&
+    loose.placed_by === null &&
+    loose.placed_at === null,
+  "loose drop releases lease without contribution",
+);
+ok(
+  (await val("select completed_pieces from games where id=$1", [game])) === 0,
+  "loose drop awards no progress",
+);
+const looseSnapshot = await val("select public.get_room_snapshot($1)", [code]);
+ok(
+  looseSnapshot.pieces.find((piece) => piece.piece_index === 0).current_x ===
+    0.5,
+  "reloaded snapshot restores loose position",
+);
+ok(
+  (await val("select public.claim_piece($1,0)", [game])) === true,
+  "loose piece can be picked up again",
+);
+for (const [x, y] of [
+  [-0.01, 0.2],
+  [0.76, 0.2],
+  [0.2, 0.68],
+  [-1, 0.2],
+  [0.2, -1],
+  [null, 0.2],
+  [0.2, null],
+  ["NaN", 0.2],
+  ["Infinity", 0.2],
+]) {
+  ok(
+    (await val(
+      "select public.move_piece($1,0,$2::double precision,$3::double precision)",
+      [game, x, y],
+    )) === false,
+    `reject invalid loose coordinates ${x},${y}`,
+  );
+}
+loose = (
+  await q("select * from puzzle_pieces where game_id=$1 and piece_index=0", [
+    game,
+  ])
+)[0];
+ok(
+  loose.current_x === 0.5 &&
+    loose.current_y === 0.5 &&
+    loose.locked_by === u[1],
+  "rejected move preserves authoritative position and lease",
+);
+await as(u[0]);
+ok(
+  (await val("select public.move_piece($1,0,.2,.2)", [game])) === false,
+  "other member cannot move a claimed loose piece",
+);
+await as(u[6]);
+await rejects("select public.move_piece($1,0,.2,.2)", [game], /Join this room/);
+await as(u[1]);
+ok(
+  (await val("select public.move_piece($1,0,$2,$3)", [
+    game,
+    1 - 1 / 4,
+    1 - 1 / 3,
+  ])) === true,
+  "fully-on-board far edge is accepted",
+);
+ok(
+  (await val("select public.claim_piece($1,0)", [game])) === true,
+  "edge piece can be reclaimed",
+);
+ok(
+  (await val("select public.move_piece($1,0,-1,-1)", [game])) === true,
+  "piece can return to tray",
+);
+await db.exec(
+  `reset role; update public.puzzle_pieces set locked_by='${u[1]}',lock_expires_at=now()-interval '1 second' where game_id='${game}' and piece_index=0;`,
+);
+await as(u[1]);
+ok(
+  (await val("select public.move_piece($1,0,.2,.2)", [game])) === false,
+  "expired lease cannot save a move",
+);
+ok(
+  (await val("select public.claim_piece($1,0)", [game])) === true,
+  "expired owner can obtain a new lease",
+);
+await q("select public.release_piece($1,0,.2,.2)", [game]);
+ok(
+  (await val(
+    "select current_x from puzzle_pieces where game_id=$1 and piece_index=0",
+    [game],
+  )) === 0.2,
+  "legacy release RPC retains valid freeform movement",
+);
+await rejects(
+  "select public.release_piece($1,0,.3,.3)",
+  [game],
+  /could not be saved/,
+);
+ok(
+  (await val("select public.claim_piece($1,0)", [game])) === true,
+  "reclaim before correct placement",
+);
+ok(
   (await val("select public.place_piece($1,0,.5,.5)", [game])) === false,
   "reject distant placement",
 );
@@ -205,6 +324,17 @@ ok(
 ok(
   (await val("select completed_pieces from games where id=$1", [game])) === 1,
   "idempotent progress",
+);
+ok(
+  (await val("select public.move_piece($1,0,.2,.2)", [game])) === false,
+  "completed pieces cannot be moved again",
+);
+ok(
+  (await val(
+    "select current_x from puzzle_pieces where game_id=$1 and piece_index=0",
+    [game],
+  )) === 0,
+  "completed piece remains in its correct position",
 );
 for (let i = 1; i < 12; i++) {
   await q("select public.claim_piece($1,$2)", [game, i]);
@@ -240,6 +370,10 @@ ok(
 ok(
   (await val("select public.complete_game($1)", [game])) === false,
   "cannot complete old game after new round",
+);
+ok(
+  (await val("select public.move_piece($1,1,.2,.2)", [game])) === false,
+  "stale game cannot accept loose moves after a new round",
 );
 await q("select public.leave_room($1)", [room.id]);
 await as(u[1]);
@@ -295,6 +429,6 @@ for (const [difficulty, count] of [
   );
 }
 console.log(
-  `PASS: migration applied; ${assertions} PostgreSQL assertions (room membership, RLS, ready/start, capacity, locks, placement, idempotency, completion, host transfer, expiry).`,
+  `PASS: migration applied; ${assertions} PostgreSQL assertions (room membership, RLS, ready/start, capacity, locks, freeform moves, placement, idempotency, completion, host transfer, expiry).`,
 );
 await db.close();

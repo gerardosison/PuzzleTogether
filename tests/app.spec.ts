@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { shuffledIndices } from "../src/lib/puzzle";
 
 const errors = new Map<Page, string[]>();
 test.beforeEach(async ({ page }) => {
@@ -153,35 +152,37 @@ test("private rooms disclose missing configuration and offer working solo play",
   ).toBeVisible();
 });
 
-test("solo puzzle supports real dragging, rejects wrong placements, persists, resumes, and completes", async ({
+test("solo puzzle supports real dragging, loose arrangements, persistence, resume, and completion", async ({
   page,
 }) => {
   await startEasyPuzzle(page);
-  const seed = await page.evaluate(
-    () => JSON.parse(localStorage.getItem("pt-solo-session")!).seed as string,
+  const layout = await page.locator(".puzzle-canvas").evaluate(
+    (element) =>
+      JSON.parse(element.getAttribute("data-layout")!) as {
+        board: { x: number; y: number; width: number; height: number };
+        slots: {
+          index: number;
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        }[];
+      },
   );
-  const index = shuffledIndices(12, seed)[0];
-  const dimensions = await page.evaluate(async () => {
-    const image = new Image();
-    image.src = "/art/wave.jpg";
-    await image.decode();
-    return { width: image.naturalWidth, height: image.naturalHeight };
-  });
-  const ratio = dimensions.width / dimensions.height;
-  const boardWidth = Math.min(720, 540 * ratio);
-  const boardHeight = Math.min(540, 720 / ratio);
-  const boardLeft = (800 - boardWidth) / 2;
-  const trayTop = boardHeight + 82;
+  const first = layout.slots[0];
+  const index = first.index;
   const canvas = page.locator(".puzzle-workspace canvas");
-  await canvas.scrollIntoViewIfNeeded();
-  const rect = await canvas.boundingBox();
-  expect(rect).not.toBeNull();
-  const box = rect!;
-  const scale = box.width / 800;
-  const source = { x: box.x + 96 * scale, y: box.y + (trayTop + 54) * scale };
+  const box = (await canvas.boundingBox())!;
+  const source = {
+    x: box.x + first.x + first.width / 2,
+    y: box.y + first.y + first.height / 2,
+  };
   const target = {
-    x: box.x + (boardLeft + (((index % 4) + 0.5) * boardWidth) / 4) * scale,
-    y: box.y + (24 + ((Math.floor(index / 4) + 0.5) * boardHeight) / 3) * scale,
+    x: box.x + layout.board.x + (((index % 4) + 0.5) * layout.board.width) / 4,
+    y:
+      box.y +
+      layout.board.y +
+      ((Math.floor(index / 4) + 0.5) * layout.board.height) / 3,
   };
   await page.mouse.move(source.x, source.y);
   await page.mouse.down();
@@ -202,7 +203,9 @@ test("solo puzzle supports real dragging, rejects wrong placements, persists, re
       .locator(".puzzle-toolbar")
       .getByText("1 of 12 pieces in place", { exact: true }),
   ).toBeVisible();
-  await page.getByText("Prefer to use your keyboard?", { exact: true }).click();
+  await page
+    .getByText("Prefer to tap or use your keyboard?", { exact: true })
+    .click();
   const wrongPiece = (index + 1) % 12;
   await keyboardPlace(
     page,
@@ -211,7 +214,10 @@ test("solo puzzle supports real dragging, rejects wrong placements, persists, re
     wrongPiece % 4,
   );
   await expect(
-    page.getByText("Not quite there. Try another position.", { exact: true }),
+    page.getByText(
+      `Piece ${wrongPiece + 1} is on the table. Move it whenever you like.`,
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
     page
@@ -250,24 +256,37 @@ test("solo difficulty switches generate the documented piece counts and mobile h
       .getByText("0 of 120 pieces in place", { exact: true }),
   ).toBeVisible();
   await expectNoOverflow(page);
-  await page.getByText("Prefer to use your keyboard?", { exact: true }).click();
+  await page
+    .getByText("Prefer to tap or use your keyboard?", { exact: true })
+    .click();
+  const pageSize = await page
+    .locator(".puzzle-canvas")
+    .evaluate(
+      (element) =>
+        JSON.parse(element.getAttribute("data-layout")!).pageSize as number,
+    );
+  const pages = Math.ceil(120 / pageSize);
   await expect(
     page.getByRole("button", { name: /^Select piece \d+$/ }),
-  ).toHaveCount(12);
-  await expect(page.getByText("1 / 10", { exact: true })).toBeVisible();
+  ).toHaveCount(pageSize);
+  await expect(page.getByText(`1 / ${pages}`, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Next pieces", exact: true }).click();
-  await expect(page.getByText("2 / 10", { exact: true })).toBeVisible();
+  await expect(page.getByText(`2 / ${pages}`, { exact: true })).toBeVisible();
   await expectNoOverflow(page);
 });
 
-test("keyboard play rejects incorrect placement and restores persistent progress before completion", async ({
+test("keyboard play arranges unsolved pieces and restores persistent progress before completion", async ({
   page,
 }) => {
   await startEasyPuzzle(page);
-  await page.getByText("Prefer to use your keyboard?", { exact: true }).click();
+  await page
+    .getByText("Prefer to tap or use your keyboard?", { exact: true })
+    .click();
   await keyboardPlace(page, 0, 1, 0);
   await expect(
-    page.getByText("Not quite there. Try another position.", { exact: true }),
+    page.getByText("Piece 1 is on the table. Move it whenever you like.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page
@@ -287,7 +306,9 @@ test("keyboard play rejects incorrect placement and restores persistent progress
       .locator(".puzzle-toolbar")
       .getByText("1 of 12 pieces in place", { exact: true }),
   ).toBeVisible();
-  await page.getByText("Prefer to use your keyboard?", { exact: true }).click();
+  await page
+    .getByText("Prefer to tap or use your keyboard?", { exact: true })
+    .click();
   for (let piece = 1; piece < 12; piece++) {
     await keyboardPlace(page, piece, Math.floor(piece / 4), piece % 4);
   }
@@ -302,20 +323,4 @@ test("keyboard play rejects incorrect placement and restores persistent progress
       () => !!JSON.parse(localStorage.getItem("pt-solo-session")!).completed,
     ),
   ).toBe(true);
-});
-
-test("medium difficulty opens 48 pieces across four tray pages", async ({
-  page,
-}) => {
-  await page.goto("/solo");
-  await page.getByRole("button", { name: /Settle in/ }).click();
-  await page.getByRole("button", { name: "Find the first piece" }).click();
-  await expect(page.locator(".puzzle-workspace canvas")).toBeVisible();
-  await expect(
-    page
-      .locator(".puzzle-toolbar")
-      .getByText("0 of 48 pieces in place", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("1 / 4", { exact: true })).toBeVisible();
-  await expectNoOverflow(page);
 });

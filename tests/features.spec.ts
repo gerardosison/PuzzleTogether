@@ -41,7 +41,7 @@ test("solo validates custom image bytes, loads a local photo, and traps preview 
   expect(session.art.image).toMatch(/^data:image\/jpeg;base64,/);
 });
 
-test("medium puzzle exposes 48 real pieces across four tray pages", async ({
+test("medium puzzle exposes 48 real pieces in an adaptive tray", async ({
   page,
 }) => {
   await page.goto("/solo?art=wave");
@@ -51,9 +51,16 @@ test("medium puzzle exposes 48 real pieces across four tray pages", async ({
   await expect(page.locator(".puzzle-toolbar")).toContainText(
     "0 of 48 pieces in place",
   );
-  await expect(page.getByText("1 / 4", { exact: true })).toBeVisible();
+  const pageSize = await page
+    .locator(".puzzle-canvas")
+    .evaluate(
+      (element) =>
+        JSON.parse(element.getAttribute("data-layout")!).pageSize as number,
+    );
+  const pages = Math.ceil(48 / pageSize);
+  await expect(page.getByText(`1 / ${pages}`, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Next pieces" }).click();
-  await expect(page.getByText("2 / 4", { exact: true })).toBeVisible();
+  await expect(page.getByText(`2 / ${pages}`, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Restart puzzle" }).click();
   const reset = page.getByRole("alertdialog");
   await expect(reset).toBeVisible();

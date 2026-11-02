@@ -33,7 +33,7 @@ export interface PuzzleBoardProps {
   pieces?: PieceState[];
   onPlace?: (index: number, x: number, y: number) => Promise<boolean>;
   onClaim?: (index: number) => Promise<boolean>;
-  onRelease?: (index: number, x: number, y: number) => void;
+  onRelease?: (index: number, x: number, y: number) => Promise<boolean>;
   onMove?: (index: number, x: number, y: number) => void;
   onRenew?: (index: number) => void;
   onProgress?: (placed: number, total: number) => void;

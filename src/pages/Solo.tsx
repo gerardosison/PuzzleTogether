@@ -366,12 +366,14 @@ export default function Solo() {
         <div className="game-utilities">
           <button
             className="text-link"
+            aria-label="Look at the picture"
             onClick={(event) => {
               modalTrigger.current = event.currentTarget;
               setPreview(true);
             }}
           >
-            <Eye size={15} /> Look at the picture
+            <Eye size={15} />{" "}
+            <span className="game-reference-label">Look at the picture</span>
           </button>
           <button
             className="icon-button"

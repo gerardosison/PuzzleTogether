@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Layer, Line, Rect, Shape, Stage, Text } from "react-konva";
 import type Konva from "konva";
-import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Undo2 } from "lucide-react";
 import { DIFFICULTIES } from "../lib/types";
 import type { PuzzleBoardProps } from "../lib/types";
 import {
@@ -10,17 +17,24 @@ import {
   shuffledIndices,
   tracePiece,
 } from "../lib/puzzle";
+import {
+  boundedPosition,
+  isOnBoard,
+  loadPositions,
+  tableLayout,
+} from "../lib/table";
+import type { Point } from "../lib/table";
 import "./puzzle.css";
 
 function restoredPieces(key: string | undefined, total: number): Set<number> {
   if (!key) return new Set();
   try {
-    const value: unknown = JSON.parse(
+    const raw: unknown = JSON.parse(
       localStorage.getItem(`${key}:pieces`) || "[]",
     );
     return new Set(
-      Array.isArray(value)
-        ? value.filter(
+      Array.isArray(raw)
+        ? raw.filter(
             (n): n is number => Number.isInteger(n) && n >= 0 && n < total,
           )
         : [],
@@ -53,41 +67,51 @@ export default function PuzzleBoard({
     () => shuffledIndices(geometry.length, seed),
     [geometry.length, seed],
   );
+  const { rows, columns } = DIFFICULTIES[difficulty];
+  const identity = JSON.stringify([image, difficulty, seed, storageKey]);
+  const [local, setLocal] = useState(() => ({
+    identity,
+    placed: restoredPieces(storageKey, geometry.length),
+    positions: loadPositions(storageKey, geometry.length, columns, rows),
+  }));
+  const localState = useMemo(
+    () =>
+      local.identity === identity
+        ? local
+        : {
+            identity,
+            placed: restoredPieces(storageKey, geometry.length),
+            positions: loadPositions(
+              storageKey,
+              geometry.length,
+              columns,
+              rows,
+            ),
+          },
+    [local, identity, storageKey, geometry.length, columns, rows],
+  );
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [imageError, setImageError] = useState(false);
-  const stateKey = JSON.stringify([image, difficulty, seed, storageKey]);
-  const [localProgress, setLocalProgress] = useState(() => ({
-    key: stateKey,
-    placed: restoredPieces(storageKey, geometry.length),
-  }));
-  const localPlaced = useMemo(
-    () =>
-      localProgress.key === stateKey
-        ? localProgress.placed
-        : restoredPieces(storageKey, geometry.length),
-    [localProgress, stateKey, storageKey, geometry.length],
-  );
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [targetRow, setTargetRow] = useState(0);
   const [targetColumn, setTargetColumn] = useState(0);
   const [status, setStatus] = useState(
-    "Drag a piece onto the canvas. Start with an edge, or follow your eye.",
+    "Arrange pieces anywhere on the board. Matching pieces snap into place.",
   );
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState<number | null>(null);
   const [reference, setReference] = useState(false);
-  const [width, setWidth] = useState(800);
+  const [size, setSize] = useState({ width: 800, height: 460 });
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastMove = useRef(0);
-  const pointerAnchor = useRef<{ index: number; x: number; y: number } | null>(
-    null,
-  );
-  const dragExpansion = useRef<{ index: number; x: number; y: number } | null>(
-    null,
-  );
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const shapeRefs = useRef(new Map<number, Konva.Shape>());
+  const activeDrag = useRef<number | null>(null);
+  const anchor = useRef<{ index: number; x: number; y: number } | null>(null);
+  const expansion = useRef<Point | null>(null);
   const claimRef = useRef<Promise<boolean> | null>(null);
   const claimGranted = useRef(false);
+  const lastMove = useRef(0);
   const completeNotified = useRef<string | null>(null);
   const callbacks = useRef({ onProgress, onComplete, onRenew });
   useEffect(() => {
@@ -95,22 +119,80 @@ export default function PuzzleBoard({
   }, [onProgress, onComplete, onRenew]);
   const placed = useMemo(
     () =>
-      new Set([
-        ...localPlaced,
-        ...(authoritative?.filter((p) => p.placed).map((p) => p.index) || []),
-      ]),
-    [localPlaced, authoritative],
+      authoritative
+        ? new Set(authoritative.filter((p) => p.placed).map((p) => p.index))
+        : localState.placed,
+    [authoritative, localState.placed],
   );
-  const remaining = order.filter((index) => !placed.has(index));
-  const pageCount = Math.max(1, Math.ceil(remaining.length / 12));
+  const positions = useMemo(
+    () =>
+      authoritative
+        ? Object.fromEntries(
+            authoritative
+              .filter((p) => !p.placed && isOnBoard(p, columns, rows))
+              .map((p) => [p.index, { x: p.x, y: p.y }]),
+          )
+        : localState.positions,
+    [authoritative, localState.positions, columns, rows],
+  );
+  const ratio = loadedImage
+    ? loadedImage.naturalWidth / loadedImage.naturalHeight
+    : 4 / 3;
+  const layout = useMemo(
+    () => tableLayout(size.width, size.height, ratio),
+    [size, ratio],
+  );
+  const { board, tray, pageSize } = layout;
+  const pieceWidth = board.width / columns;
+  const pieceHeight = board.height / rows;
+  const remaining = order.filter(
+    (index) => !placed.has(index) && !positions[index],
+  );
+  const pageCount = Math.max(1, Math.ceil(remaining.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
-  const visible = remaining.slice(safePage * 12, safePage * 12 + 12);
-  const { rows, columns } = DIFFICULTIES[difficulty];
+  const visible = remaining.slice(
+    safePage * pageSize,
+    safePage * pageSize + pageSize,
+  );
+  const slotWidth = tray.width / layout.columns;
+  const slotHeight = (tray.height - 27) / layout.rows;
+  const thumbnailScale = Math.min(
+    (slotWidth - 18) / (pieceWidth * 1.45),
+    (slotHeight - 14) / (pieceHeight * 1.45),
+    1,
+  );
+  const trayPosition = (index: number) => {
+    const slot = Math.max(0, visible.indexOf(index));
+    return {
+      x:
+        tray.x +
+        (slot % layout.columns) * slotWidth +
+        (slotWidth - pieceWidth * thumbnailScale) / 2,
+      y:
+        tray.y +
+        27 +
+        Math.floor(slot / layout.columns) * slotHeight +
+        (slotHeight - pieceHeight * thumbnailScale) / 2,
+    };
+  };
+  const canonicalPosition = (index: number) =>
+    placed.has(index)
+      ? { x: geometry[index].x, y: geometry[index].y }
+      : positions[index];
+  const screenPosition = (index: number) => {
+    const position = canonicalPosition(index);
+    return position
+      ? {
+          x: board.x + position.x * board.width,
+          y: board.y + position.y * board.height,
+        }
+      : trayPosition(index);
+  };
 
   useEffect(() => {
     setPage(0);
     setSelected(null);
-  }, [stateKey]);
+  }, [identity]);
   useEffect(() => {
     let active = true;
     const img = new Image();
@@ -130,106 +212,137 @@ export default function PuzzleBoard({
       img.onerror = null;
     };
   }, [image]);
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) =>
-      setWidth(Math.max(240, entries[0].contentRect.width)),
-    );
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+    const measure = () => {
+      const width = container.getBoundingClientRect().width;
+      if (!width) return;
+      const viewport = window.visualViewport?.height || window.innerHeight;
+      // Measure the document position, not the scrolled position; scrolling must not grow the canvas.
+      const top = canvas.getBoundingClientRect().top + window.scrollY;
+      const height = Math.min(720, Math.max(150, viewport - top - 62));
+      setSize((previous) =>
+        Math.abs(previous.width - width) < 0.5 &&
+        Math.abs(previous.height - height) < 0.5
+          ? previous
+          : { width, height },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
   }, []);
   useEffect(() => {
     callbacks.current.onProgress?.(placed.size, geometry.length);
     if (
       placed.size === geometry.length &&
-      completeNotified.current !== stateKey
+      completeNotified.current !== identity
     ) {
-      completeNotified.current = stateKey;
+      completeNotified.current = identity;
       callbacks.current.onComplete?.();
     }
-    if (storageKey && !authoritative) {
-      try {
-        localStorage.setItem(
-          `${storageKey}:pieces`,
-          JSON.stringify([...placed]),
-        );
-      } catch {
-        setStatus(
-          "Your browser could not save this puzzle. You can keep playing in this tab.",
-        );
-      }
+  }, [placed, geometry.length, identity]);
+  useEffect(() => {
+    if (!storageKey || authoritative) return;
+    try {
+      localStorage.setItem(
+        `${storageKey}:pieces`,
+        JSON.stringify([...localState.placed]),
+      );
+      localStorage.setItem(
+        `${storageKey}:positions`,
+        JSON.stringify(localState.positions),
+      );
+    } catch {
+      setStatus(
+        "Your browser could not save this puzzle. You can keep playing in this tab.",
+      );
     }
-  }, [placed, geometry.length, storageKey, authoritative, stateKey]);
+  }, [storageKey, authoritative, localState]);
   useEffect(() => {
     if (dragging === null || !callbacks.current.onRenew) return;
-    const interval = window.setInterval(
+    const timer = window.setInterval(
       () => callbacks.current.onRenew?.(dragging),
       4000,
     );
-    return () => window.clearInterval(interval);
+    return () => clearInterval(timer);
   }, [dragging]);
 
-  const ratio = loadedImage
-    ? loadedImage.naturalWidth / loadedImage.naturalHeight
-    : 4 / 3;
-  const boardWidth = Math.min(720, 540 * ratio);
-  const boardHeight = Math.min(540, 720 / ratio);
-  const boardLeft = (800 - boardWidth) / 2;
-  const boardTop = 24;
-  const trayTop = boardHeight + 82;
-  const stageHeight = trayTop + 204;
-  const pieceWidth = boardWidth / columns;
-  const pieceHeight = boardHeight / rows;
-  const thumbnailScale = Math.min(88 / pieceWidth, 68 / pieceHeight, 1);
-  const scale = width / 800;
-  const trayPosition = (index: number) => {
-    const slot = Math.max(0, visible.indexOf(index));
-    return {
-      x: 52 + (slot % 6) * 120 + (88 - pieceWidth * thumbnailScale) / 2,
-      y:
-        trayTop +
-        20 +
-        Math.floor(slot / 6) * 94 +
-        (68 - pieceHeight * thumbnailScale) / 2,
-    };
-  };
-
-  const place = useCallback(
-    async (index: number, x: number, y: number): Promise<boolean> => {
-      if (!isCorrectPlacement(geometry[index], x, y)) {
-        setStatus("Not quite there. Try another position.");
-        return false;
-      }
-      try {
-        if (onPlace && !(await onPlace(index, x, y))) {
-          setStatus("That placement could not be confirmed. Please try again.");
-          return false;
-        }
-        setLocalProgress((previous) => ({
-          key: stateKey,
-          placed: new Set([
-            ...(previous.key === stateKey
-              ? previous.placed
-              : restoredPieces(storageKey, geometry.length)),
-            index,
-          ]),
-        }));
-        setSelected(null);
-        setStatus(`Piece ${index + 1} found its place.`);
-        return true;
-      } catch (error) {
-        setStatus(
-          error instanceof Error
-            ? error.message
-            : "The placement could not be saved. Please try again.",
-        );
-        return false;
-      }
+  const updateLocal = useCallback(
+    (index: number, position: Point | null, solved: boolean) => {
+      setLocal((previous) => {
+        const base =
+          previous.identity === identity
+            ? previous
+            : {
+                identity,
+                placed: restoredPieces(storageKey, geometry.length),
+                positions: loadPositions(
+                  storageKey,
+                  geometry.length,
+                  columns,
+                  rows,
+                ),
+              };
+        const nextPositions = { ...base.positions };
+        if (position && !solved) nextPositions[index] = position;
+        else delete nextPositions[index];
+        return {
+          identity,
+          placed: solved ? new Set([...base.placed, index]) : base.placed,
+          positions: nextPositions,
+        };
+      });
     },
-    [geometry, onPlace, stateKey, storageKey],
+    [identity, storageKey, geometry.length, columns, rows],
   );
-
-  const keyboardPlace = async () => {
+  const move = async (
+    index: number,
+    x: number,
+    y: number,
+    toTray = false,
+  ): Promise<boolean> => {
+    if (!toTray && isCorrectPlacement(geometry[index], x, y)) {
+      if (onPlace && !(await onPlace(index, x, y))) {
+        setStatus("That placement could not be confirmed. Please try again.");
+        return false;
+      }
+      if (!authoritative) updateLocal(index, null, true);
+      setSelected(null);
+      setStatus(`Piece ${index + 1} found its place.`);
+      return true;
+    }
+    const position = toTray
+      ? { x: -1, y: -1 }
+      : boundedPosition(x, y, columns, rows);
+    if (onRelease && !(await onRelease(index, position.x, position.y))) {
+      setStatus(
+        "That move could not be saved. The piece has returned to its last position.",
+      );
+      return false;
+    }
+    if (authoritative && !onRelease) {
+      setStatus("Loose moves need the latest room setup. Please reconnect.");
+      return false;
+    }
+    if (!authoritative) updateLocal(index, toTray ? null : position, false);
+    setStatus(
+      toTray
+        ? `Piece ${index + 1} is back in the tray.`
+        : `Piece ${index + 1} is on the table. Move it whenever you like.`,
+    );
+    return true;
+  };
+  const keyboardMove = async (toTray = false) => {
     if (selected === null || busy || placed.has(selected)) return;
     setBusy(true);
     try {
@@ -237,15 +350,59 @@ export default function PuzzleBoard({
         setStatus("Someone else is moving this piece. Choose another.");
         return;
       }
-      const x = targetColumn / columns;
-      const y = targetRow / rows;
-      const success = await place(selected, x, y);
-      if (!success) onRelease?.(selected, -1, -1);
-    } catch {
-      setStatus("The connection interrupted your move. Please try again.");
+      const success = await move(
+        selected,
+        targetColumn / columns,
+        targetRow / rows,
+        toTray,
+      );
+      if (!success && onRelease) {
+        const position = positions[selected] || { x: -1, y: -1 };
+        await onRelease(selected, position.x, position.y);
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "The connection interrupted your move. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
+  };
+  const lockedElsewhere = (index: number) => {
+    const lock = authoritative?.find((p) => p.index === index)?.lockedBy;
+    return !!lock && lock !== userId;
+  };
+  const movableIndices = [
+    ...new Set([
+      ...visible,
+      ...order.filter((index) => !!positions[index] && !placed.has(index)),
+    ]),
+  ];
+  const slots = visible.map((index) => ({
+    index,
+    ...trayPosition(index),
+    width: pieceWidth * thumbnailScale,
+    height: pieceHeight * thumbnailScale,
+  }));
+  const tablePieces = geometry
+    .filter((p) => placed.has(p.index) || !!positions[p.index])
+    .map((p) => ({
+      index: p.index,
+      ...screenPosition(p.index),
+      width: pieceWidth,
+      height: pieceHeight,
+      placed: placed.has(p.index),
+    }));
+  const metadata = {
+    board,
+    tray,
+    slots,
+    tablePieces,
+    width: size.width,
+    height: size.height,
+    pageSize,
   };
 
   if (imageError)
@@ -255,9 +412,8 @@ export default function PuzzleBoard({
         another image.
       </div>
     );
-
   return (
-    <div className="puzzle-workspace" ref={containerRef}>
+    <div className="puzzle-workspace" ref={containerRef} aria-busy={busy}>
       <div className="puzzle-toolbar">
         <span>
           {placed.size} of {geometry.length} pieces in place
@@ -267,344 +423,356 @@ export default function PuzzleBoard({
           aria-pressed={reference}
           onClick={() => setReference(!reference)}
         >
-          {reference ? <EyeOff size={15} /> : <Eye size={15} />}
+          {reference ? <EyeOff size={15} /> : <Eye size={15} />}{" "}
           {reference ? "Hide reference" : "Show reference"}
         </button>
       </div>
-      {reference && (
-        <div className="puzzle-reference">
-          <img src={image} alt="Reference for the complete puzzle" />
-          <span>Take a closer look.</span>
-        </div>
-      )}
-      {!loadedImage ? (
-        <div className="puzzle-loading" role="status">
-          Preparing your canvas…
-        </div>
-      ) : (
-        <Stage
-          width={800 * scale}
-          height={stageHeight * scale}
-          scaleX={scale}
-          scaleY={scale}
-          aria-hidden="true"
-        >
-          <Layer>
-            <Rect
-              x={boardLeft}
-              y={boardTop}
-              width={boardWidth}
-              height={boardHeight}
-              fill="#efeeeb"
-              stroke="#b9b8b2"
-              strokeWidth={1}
-            />
-            {Array.from({ length: columns - 1 }, (_, i) => (
-              <Line
-                key={`v${i}`}
-                points={[
-                  boardLeft + (i + 1) * pieceWidth,
-                  boardTop,
-                  boardLeft + (i + 1) * pieceWidth,
-                  boardTop + boardHeight,
-                ]}
-                stroke="#d8d7d0"
-                strokeWidth={0.7}
-                dash={[3, 5]}
+      <div
+        className="puzzle-canvas"
+        ref={canvasRef}
+        data-layout={JSON.stringify(metadata)}
+        aria-label="Puzzle board and piece tray"
+      >
+        {!loadedImage ? (
+          <div className="puzzle-loading" role="status">
+            Preparing your canvas…
+          </div>
+        ) : (
+          <Stage width={size.width} height={size.height} aria-hidden="true">
+            <Layer>
+              <Rect
+                {...board}
+                fill="#efeeeb"
+                stroke="#b9b8b2"
+                strokeWidth={1}
               />
-            ))}
-            {Array.from({ length: rows - 1 }, (_, i) => (
-              <Line
-                key={`h${i}`}
-                points={[
-                  boardLeft,
-                  boardTop + (i + 1) * pieceHeight,
-                  boardLeft + boardWidth,
-                  boardTop + (i + 1) * pieceHeight,
-                ]}
-                stroke="#d8d7d0"
+              {Array.from({ length: columns - 1 }, (_, i) => (
+                <Line
+                  key={`v${i}`}
+                  points={[
+                    board.x + (i + 1) * pieceWidth,
+                    board.y,
+                    board.x + (i + 1) * pieceWidth,
+                    board.y + board.height,
+                  ]}
+                  stroke="#d8d7d0"
+                  strokeWidth={0.7}
+                  dash={[3, 5]}
+                  listening={false}
+                />
+              ))}
+              {Array.from({ length: rows - 1 }, (_, i) => (
+                <Line
+                  key={`h${i}`}
+                  points={[
+                    board.x,
+                    board.y + (i + 1) * pieceHeight,
+                    board.x + board.width,
+                    board.y + (i + 1) * pieceHeight,
+                  ]}
+                  stroke="#d8d7d0"
+                  strokeWidth={0.7}
+                  dash={[3, 5]}
+                  listening={false}
+                />
+              ))}
+              {!placed.size && !Object.keys(positions).length && (
+                <Text
+                  x={board.x + 8}
+                  y={board.y + board.height / 2 - 8}
+                  width={board.width - 16}
+                  text="Your picture starts here."
+                  align="center"
+                  fontSize={Math.min(13, board.width / 24)}
+                  fill="#7d7b75"
+                  fontFamily="Arial"
+                  listening={false}
+                />
+              )}
+              <Rect
+                {...tray}
+                fill="#f1f0eb"
+                stroke="#dedbd3"
                 strokeWidth={0.7}
-                dash={[3, 5]}
+                listening={false}
               />
-            ))}
-            {placed.size === 0 && (
               <Text
-                x={boardLeft}
-                y={boardTop + boardHeight / 2 - 7}
-                width={boardWidth}
-                text="A little patience. One piece at a time."
-                align="center"
-                fontSize={13}
-                fill="#7d7b75"
+                x={tray.x + 8}
+                y={tray.y + 9}
+                width={tray.width - 16}
+                text={
+                  remaining.length
+                    ? "THE PIECE TRAY"
+                    : "ALL PIECES ON THE TABLE"
+                }
+                letterSpacing={1.2}
+                fontSize={Math.min(10, tray.width / 20)}
+                fill="#686760"
                 fontFamily="Arial"
                 listening={false}
               />
-            )}
-            <Text
-              x={40}
-              y={trayTop - 18}
-              text="THE PIECE TABLE"
-              fontFamily="Arial"
-              letterSpacing={2}
-              fontSize={10}
-              fill="#686760"
-              listening={false}
-            />
-            <Line
-              points={[40, trayTop - 2, 760, trayTop - 2]}
-              stroke="#d1d0c9"
-              strokeWidth={1}
-            />
-            {geometry
-              .filter(
-                (piece) =>
-                  placed.has(piece.index) ||
-                  visible.includes(piece.index) ||
-                  authoritative?.some(
-                    (p) =>
-                      p.index === piece.index &&
-                      p.lockedBy &&
-                      p.lockedBy !== userId,
-                  ),
-              )
-              .sort(
-                (a, b) =>
-                  Number(placed.has(b.index)) - Number(placed.has(a.index)),
-              )
-              .map((piece) => {
-                const isPlaced = placed.has(piece.index);
-                const remote = authoritative?.find(
-                  (p) => p.index === piece.index,
-                );
-                const lockedElsewhere =
-                  !!remote?.lockedBy && remote.lockedBy !== userId;
-                const remoteOnBoard =
-                  lockedElsewhere && remote.x >= 0 && remote.y >= 0;
-                const position = isPlaced
-                  ? {
-                      x: boardLeft + piece.x * boardWidth,
-                      y: boardTop + piece.y * boardHeight,
-                    }
-                  : remoteOnBoard
-                    ? {
-                        x: boardLeft + remote.x * boardWidth,
-                        y: boardTop + remote.y * boardHeight,
+              {geometry
+                .filter(
+                  (p) =>
+                    placed.has(p.index) ||
+                    positions[p.index] ||
+                    visible.includes(p.index) ||
+                    activeDrag.current === p.index,
+                )
+                .sort(
+                  (a, b) =>
+                    Number(placed.has(b.index)) - Number(placed.has(a.index)) ||
+                    Number(a.index === selected) - Number(b.index === selected),
+                )
+                .map((piece) => {
+                  const isPlaced = placed.has(piece.index);
+                  const onBoard = !!canonicalPosition(piece.index);
+                  const originalPosition = screenPosition(piece.index);
+                  const originalScale = onBoard ? 1 : thumbnailScale;
+                  const currentNode = shapeRefs.current.get(piece.index);
+                  const isDragging = activeDrag.current === piece.index;
+                  const position =
+                    isDragging && currentNode
+                      ? { x: currentNode.x(), y: currentNode.y() }
+                      : originalPosition;
+                  const pieceScale = isDragging ? 1 : originalScale;
+                  const captureAnchor = (node: Konva.Node) => {
+                    const point = node.getRelativePointerPosition();
+                    if (point)
+                      anchor.current = { index: piece.index, ...point };
+                  };
+                  return (
+                    <Shape
+                      key={piece.index}
+                      ref={(node) => {
+                        if (node) shapeRefs.current.set(piece.index, node);
+                        else shapeRefs.current.delete(piece.index);
+                      }}
+                      {...position}
+                      scaleX={pieceScale}
+                      scaleY={pieceScale}
+                      draggable={
+                        !isPlaced && !lockedElsewhere(piece.index) && !busy
                       }
-                    : trayPosition(piece.index);
-                const pieceScale =
-                  isPlaced || remoteOnBoard ? 1 : thumbnailScale;
-                return (
-                  <Shape
-                    key={piece.index}
-                    x={position.x}
-                    y={position.y}
-                    scaleX={pieceScale}
-                    scaleY={pieceScale}
-                    draggable={!isPlaced && !lockedElsewhere && !busy}
-                    stroke={selected === piece.index ? "#171716" : "#f7f6f2"}
-                    strokeWidth={isPlaced ? 0.45 : 1.4}
-                    opacity={lockedElsewhere ? 0.65 : 1}
-                    shadowColor="#000"
-                    shadowBlur={isPlaced ? 0 : 3}
-                    shadowOpacity={0.13}
-                    shadowOffsetY={isPlaced ? 0 : 2}
-                    sceneFunc={(context, shape) => {
-                      context.save();
-                      tracePiece(context, piece, pieceWidth, pieceHeight);
-                      context.clip();
-                      context.drawImage(
-                        loadedImage,
-                        -piece.x * boardWidth,
-                        -piece.y * boardHeight,
-                        boardWidth,
-                        boardHeight,
-                      );
-                      context.restore();
-                      tracePiece(context, piece, pieceWidth, pieceHeight);
-                      context.strokeShape(shape);
-                    }}
-                    hitFunc={(context, shape) => {
-                      tracePiece(context, piece, pieceWidth, pieceHeight);
-                      context.fillStrokeShape(shape);
-                    }}
-                    onClick={() => {
-                      if (!isPlaced && !lockedElsewhere)
-                        setSelected(piece.index);
-                    }}
-                    onTap={() => {
-                      if (!isPlaced && !lockedElsewhere)
-                        setSelected(piece.index);
-                    }}
-                    onMouseDown={(event) => {
-                      const point = event.target.getRelativePointerPosition();
-                      if (point)
-                        pointerAnchor.current = {
-                          index: piece.index,
-                          ...point,
+                      stroke={selected === piece.index ? "#171716" : "#f7f6f2"}
+                      strokeWidth={isPlaced ? 0.45 : 1.2}
+                      opacity={lockedElsewhere(piece.index) ? 0.6 : 1}
+                      shadowColor="#000"
+                      shadowBlur={isPlaced ? 0 : 3}
+                      shadowOpacity={0.15}
+                      shadowOffsetY={isPlaced ? 0 : 2}
+                      sceneFunc={(context, shape) => {
+                        context.save();
+                        tracePiece(context, piece, pieceWidth, pieceHeight);
+                        context.clip();
+                        context.drawImage(
+                          loadedImage,
+                          -piece.x * board.width,
+                          -piece.y * board.height,
+                          board.width,
+                          board.height,
+                        );
+                        context.restore();
+                        tracePiece(context, piece, pieceWidth, pieceHeight);
+                        context.strokeShape(shape);
+                      }}
+                      hitFunc={(context, shape) => {
+                        tracePiece(context, piece, pieceWidth, pieceHeight);
+                        context.fillStrokeShape(shape);
+                      }}
+                      onClick={() => {
+                        if (!isPlaced && !lockedElsewhere(piece.index))
+                          setSelected(piece.index);
+                      }}
+                      onTap={() => {
+                        if (!isPlaced && !lockedElsewhere(piece.index))
+                          setSelected(piece.index);
+                      }}
+                      onMouseDown={(event) => captureAnchor(event.target)}
+                      onTouchStart={(event) => captureAnchor(event.target)}
+                      dragBoundFunc={(position) =>
+                        expansion.current && activeDrag.current === piece.index
+                          ? {
+                              x: position.x - expansion.current.x,
+                              y: position.y - expansion.current.y,
+                            }
+                          : position
+                      }
+                      onDragStart={(event) => {
+                        const node = event.target as Konva.Shape;
+                        const point =
+                          anchor.current?.index === piece.index
+                            ? anchor.current
+                            : node.getRelativePointerPosition();
+                        expansion.current = {
+                          x: (point?.x || 0) * (1 - originalScale),
+                          y: (point?.y || 0) * (1 - originalScale),
                         };
-                    }}
-                    onTouchStart={(event) => {
-                      const point = event.target.getRelativePointerPosition();
-                      if (point)
-                        pointerAnchor.current = {
-                          index: piece.index,
-                          ...point,
-                        };
-                    }}
-                    dragBoundFunc={(position) => {
-                      const expansion = dragExpansion.current;
-                      if (expansion?.index !== piece.index) return position;
-                      // Konva retains the thumbnail's pointer offset for this drag.
-                      // Shift its proposed absolute position by the expansion so
-                      // the exact point grabbed stays underneath the pointer.
-                      return {
-                        x: position.x - expansion.x * scale,
-                        y: position.y - expansion.y * scale,
-                      };
-                    }}
-                    onDragStart={(event) => {
-                      const node = event.target as Konva.Shape;
-                      const anchor =
-                        pointerAnchor.current?.index === piece.index
-                          ? pointerAnchor.current
-                          : node.getRelativePointerPosition();
-                      dragExpansion.current = {
-                        index: piece.index,
-                        x: (anchor?.x || 0) * (1 - pieceScale),
-                        y: (anchor?.y || 0) * (1 - pieceScale),
-                      };
-                      node.moveToTop();
-                      node.scale({ x: 1, y: 1 });
-                      setSelected(piece.index);
-                      setDragging(piece.index);
-                      claimGranted.current = !onClaim;
-                      claimRef.current = onClaim
-                        ? onClaim(piece.index)
-                            .then((granted) => {
-                              claimGranted.current = granted;
-                              if (!granted) {
-                                node.stopDrag();
-                                dragExpansion.current = null;
-                                node.position(position);
-                                node.scale({ x: pieceScale, y: pieceScale });
-                                setDragging(null);
+                        activeDrag.current = piece.index;
+                        node.moveToTop();
+                        node.scale({ x: 1, y: 1 });
+                        setSelected(piece.index);
+                        setDragging(piece.index);
+                        claimGranted.current = !onClaim;
+                        claimRef.current = onClaim
+                          ? onClaim(piece.index)
+                              .then((granted) => {
+                                claimGranted.current = granted;
+                                if (!granted) {
+                                  setStatus(
+                                    "Someone else has this piece. Try another.",
+                                  );
+                                  node.stopDrag();
+                                }
+                                return granted;
+                              })
+                              .catch(() => {
                                 setStatus(
-                                  "Someone else has this piece. Try another.",
+                                  "Could not reserve this piece. Please try again.",
                                 );
-                              }
-                              return granted;
-                            })
-                            .catch(() => {
-                              node.stopDrag();
-                              dragExpansion.current = null;
-                              node.position(position);
-                              node.scale({ x: pieceScale, y: pieceScale });
-                              setDragging(null);
-                              setStatus(
-                                "Could not reserve this piece. Please try again.",
+                                node.stopDrag();
+                                return false;
+                              })
+                          : Promise.resolve(true);
+                      }}
+                      onDragMove={(event) => {
+                        if (
+                          !claimGranted.current ||
+                          Date.now() - lastMove.current < 80
+                        )
+                          return;
+                        lastMove.current = Date.now();
+                        onMove?.(
+                          piece.index,
+                          (event.target.x() - board.x) / board.width,
+                          (event.target.y() - board.y) / board.height,
+                        );
+                      }}
+                      onDragEnd={async (event) => {
+                        const node = event.target as Konva.Shape;
+                        const x = (node.x() - board.x) / board.width;
+                        const y = (node.y() - board.y) / board.height;
+                        const pointer = node.getStage()?.getPointerPosition();
+                        const toTray =
+                          !!pointer &&
+                          pointer.x >= tray.x &&
+                          pointer.x <= tray.x + tray.width &&
+                          pointer.y >= tray.y &&
+                          pointer.y <= tray.y + tray.height;
+                        expansion.current = null;
+                        anchor.current = null;
+                        setBusy(true);
+                        try {
+                          const granted = await (claimRef.current ||
+                            Promise.resolve(true));
+                          const success =
+                            granted && (await move(piece.index, x, y, toTray));
+                          if (success) {
+                            const solved =
+                              !toTray && isCorrectPlacement(piece, x, y);
+                            const target = solved
+                              ? { x: piece.x, y: piece.y }
+                              : boundedPosition(x, y, columns, rows);
+                            node.position(
+                              toTray
+                                ? trayPosition(piece.index)
+                                : {
+                                    x: board.x + target.x * board.width,
+                                    y: board.y + target.y * board.height,
+                                  },
+                            );
+                            node.scale({
+                              x: toTray ? thumbnailScale : 1,
+                              y: toTray ? thumbnailScale : 1,
+                            });
+                          } else {
+                            node.position(originalPosition);
+                            node.scale({ x: originalScale, y: originalScale });
+                            if (granted && onRelease) {
+                              const previous = positions[piece.index] || {
+                                x: -1,
+                                y: -1,
+                              };
+                              await onRelease(
+                                piece.index,
+                                previous.x,
+                                previous.y,
                               );
-                              return false;
-                            })
-                        : Promise.resolve(true);
-                    }}
-                    onDragMove={(event) => {
-                      if (
-                        !claimGranted.current ||
-                        Date.now() - lastMove.current < 80
-                      )
-                        return;
-                      lastMove.current = Date.now();
-                      onMove?.(
-                        piece.index,
-                        (event.target.x() - boardLeft) / boardWidth,
-                        (event.target.y() - boardTop) / boardHeight,
-                      );
-                    }}
-                    onDragEnd={async (event) => {
-                      const node = event.target as Konva.Shape;
-                      const x = (node.x() - boardLeft) / boardWidth;
-                      const y = (node.y() - boardTop) / boardHeight;
-                      dragExpansion.current = null;
-                      pointerAnchor.current = null;
-                      setDragging(null);
-                      setBusy(true);
-                      try {
-                        const granted = await (claimRef.current ||
-                          Promise.resolve(true));
-                        if (granted && (await place(piece.index, x, y))) {
-                          node.position({
-                            x: boardLeft + piece.x * boardWidth,
-                            y: boardTop + piece.y * boardHeight,
-                          });
-                          node.scale({ x: 1, y: 1 });
-                        } else {
-                          node.position(trayPosition(piece.index));
-                          node.scale({ x: thumbnailScale, y: thumbnailScale });
-                          if (granted) onRelease?.(piece.index, -1, -1);
+                            }
+                          }
+                        } catch (error) {
+                          node.position(originalPosition);
+                          node.scale({ x: originalScale, y: originalScale });
+                          setStatus(
+                            error instanceof Error
+                              ? error.message
+                              : "This move could not be saved. Try again.",
+                          );
+                        } finally {
+                          activeDrag.current = null;
+                          setDragging(null);
+                          setBusy(false);
+                          claimRef.current = null;
+                          claimGranted.current = false;
                         }
-                      } finally {
-                        setBusy(false);
-                        claimRef.current = null;
-                        claimGranted.current = false;
-                      }
-                    }}
-                  />
-                );
-              })}
-          </Layer>
-        </Stage>
-      )}
+                      }}
+                    />
+                  );
+                })}
+            </Layer>
+          </Stage>
+        )}
+        {reference && (
+          <div className="puzzle-reference">
+            <img src={image} alt="Reference for the complete puzzle" />
+            <span>Take a closer look.</span>
+          </div>
+        )}
+      </div>
       <div className="puzzle-table-footer">
         <p role="status" aria-live="polite">
           {status}
         </p>
-        {pageCount > 1 && (
-          <div className="puzzle-pagination">
-            <button
-              type="button"
-              aria-label="Previous pieces"
-              disabled={safePage === 0}
-              onClick={() => setPage(safePage - 1)}
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <span>
-              {safePage + 1} / {pageCount}
-            </span>
-            <button
-              type="button"
-              aria-label="Next pieces"
-              disabled={safePage >= pageCount - 1}
-              onClick={() => setPage(safePage + 1)}
-            >
-              <ChevronRight size={17} />
-            </button>
-          </div>
-        )}
+        <div className="puzzle-pagination">
+          <button
+            type="button"
+            aria-label="Previous pieces"
+            disabled={safePage === 0 || busy || dragging !== null}
+            onClick={() => setPage(safePage - 1)}
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <span>
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            aria-label="Next pieces"
+            disabled={safePage >= pageCount - 1 || busy || dragging !== null}
+            onClick={() => setPage(safePage + 1)}
+          >
+            <ChevronRight size={17} />
+          </button>
+        </div>
       </div>
       {placed.size < geometry.length && (
         <details className="puzzle-keyboard">
-          <summary>Prefer to use your keyboard?</summary>
+          <summary>Prefer to tap or use your keyboard?</summary>
           <p>
-            Choose a piece, then a row and column on the canvas. Rows run top to
-            bottom; columns run left to right.
+            Choose a piece, then a row and column. You can leave it there and
+            move it again later. Matching pieces lock into place.
           </p>
           <div
             className="puzzle-piece-select"
             aria-label="Choose an unplaced piece"
           >
-            {visible.map((index) => (
+            {movableIndices.map((index) => (
               <button
                 type="button"
                 key={index}
                 aria-label={`Select piece ${index + 1}`}
                 aria-pressed={selected === index}
-                disabled={
-                  !!authoritative?.find(
-                    (p) =>
-                      p.index === index && p.lockedBy && p.lockedBy !== userId,
-                  )
-                }
+                disabled={busy || lockedElsewhere(index)}
                 onClick={() => setSelected(index)}
                 style={{
                   backgroundImage: `url("${image}")`,
@@ -612,7 +780,10 @@ export default function PuzzleBoard({
                   backgroundPosition: `${(geometry[index].column / Math.max(1, columns - 1)) * 100}% ${(geometry[index].row / Math.max(1, rows - 1)) * 100}%`,
                 }}
               >
-                <span>{index + 1}</span>
+                <span>
+                  {index + 1}
+                  {positions[index] ? " · on board" : ""}
+                </span>
               </button>
             ))}
           </div>
@@ -622,7 +793,7 @@ export default function PuzzleBoard({
               <select
                 aria-label="Target row"
                 value={targetRow}
-                onChange={(e) => setTargetRow(Number(e.target.value))}
+                onChange={(event) => setTargetRow(Number(event.target.value))}
               >
                 {Array.from({ length: rows }, (_, i) => (
                   <option key={i} value={i}>
@@ -636,7 +807,9 @@ export default function PuzzleBoard({
               <select
                 aria-label="Target column"
                 value={targetColumn}
-                onChange={(e) => setTargetColumn(Number(e.target.value))}
+                onChange={(event) =>
+                  setTargetColumn(Number(event.target.value))
+                }
               >
                 {Array.from({ length: columns }, (_, i) => (
                   <option key={i} value={i}>
@@ -647,15 +820,22 @@ export default function PuzzleBoard({
             </label>
             <button
               type="button"
-              className="button button-dark"
               disabled={selected === null || busy}
-              onClick={() => void keyboardPlace()}
+              onClick={() => void keyboardMove()}
             >
               {busy
-                ? "Placing…"
+                ? "Moving…"
                 : selected === null
                   ? "Choose a piece"
                   : `Place piece ${selected + 1}`}
+            </button>
+            <button
+              type="button"
+              className="return-to-tray"
+              disabled={selected === null || !positions[selected] || busy}
+              onClick={() => void keyboardMove(true)}
+            >
+              <Undo2 size={15} /> Return to tray
             </button>
           </div>
         </details>

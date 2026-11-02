@@ -870,10 +870,16 @@ export function MultiplayerGame() {
             })
             .catch((reason: unknown) => setError(errorText(reason)));
         }}
-        onRelease={(index, x, y) => {
-          void releasePiece(index, game.id, x, y).catch((reason: unknown) =>
-            setError(errorText(reason)),
-          );
+        onRelease={async (index, x, y) => {
+          try {
+            const success = await releasePiece(index, game.id, x, y);
+            await refresh();
+            return success;
+          } catch (reason) {
+            setError(errorText(reason));
+            await refresh().catch(() => undefined);
+            return false;
+          }
         }}
       />
       <div className="room-game-bottom">

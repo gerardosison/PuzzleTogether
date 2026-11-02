@@ -867,3 +867,132 @@
     transition: none;
   }
 }
+
+/* Game chrome stays shallow so the shared board and tray fit together. */
+.multiplayer-game-page {
+  padding-bottom: 28px;
+}
+.multiplayer-game-page .room-topline {
+  margin: 8px 0 10px;
+  padding-bottom: 6px;
+  min-height: 25px;
+}
+.multiplayer-game-page .room-topline > .eyebrow {
+  margin: 0;
+  font-size: 8px;
+}
+.multiplayer-game-page .room-heading-row {
+  margin-bottom: 10px;
+  gap: 18px;
+}
+.multiplayer-game-page .room-heading-row > div:first-child {
+  min-width: 0;
+}
+.multiplayer-game-page .room-heading-row h1 {
+  margin-bottom: 3px;
+  font-size: 28px;
+  overflow-wrap: anywhere;
+}
+.multiplayer-game-page .room-heading-row p {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.multiplayer-game-page .room-game-numbers {
+  gap: 25px;
+}
+.multiplayer-game-page .room-game-numbers strong {
+  font-size: 19px;
+}
+.multiplayer-game-page .room-game-numbers small {
+  font-size: 7px;
+  margin-top: 3px;
+}
+.multiplayer-game-page .room-game-progress {
+  margin-top: 0;
+}
+.multiplayer-game-page .room-game-toolbar {
+  padding: 2px 0;
+  min-height: 34px;
+  gap: 15px;
+}
+.multiplayer-game-page .room-game-toolbar > p {
+  margin: 5px 0;
+  gap: 12px;
+  min-width: 0;
+}
+.multiplayer-game-page .room-reference summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.multiplayer-game-page .room-reference img {
+  top: 45px;
+  max-width: calc(100vw - 40px);
+}
+.multiplayer-game-page .room-game-bottom {
+  margin-top: 14px;
+  padding-top: 8px;
+  gap: 18px;
+}
+.multiplayer-game-page .room-game-bottom .text-link {
+  min-height: 44px;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .multiplayer-game-page .room-heading-row {
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+  .multiplayer-game-page .room-heading-row h1 {
+    font-size: clamp(21px, 5.8vw, 27px);
+    letter-spacing: -0.8px;
+  }
+  .multiplayer-game-page .room-heading-row p {
+    font-size: 9px;
+  }
+  .multiplayer-game-page .room-game-numbers {
+    width: auto;
+    padding: 0;
+    gap: 10px;
+  }
+  .multiplayer-game-page .room-game-numbers strong {
+    font-size: 15px;
+  }
+  .multiplayer-game-page .room-game-numbers strong > span {
+    font-size: 10px;
+  }
+  .multiplayer-game-page .room-game-numbers small {
+    font-size: 5px;
+    letter-spacing: 0.3px;
+  }
+  .multiplayer-game-page .room-game-toolbar > p {
+    max-width: none;
+    gap: 6px 10px;
+  }
+  .multiplayer-game-page .room-inline-player {
+    font-size: 8px;
+  }
+  .multiplayer-game-page .room-reference {
+    font-size: 9px;
+  }
+}
+@media (max-height: 500px) and (min-width: 600px) {
+  .multiplayer-game-page .room-topline {
+    margin: 3px 0 5px;
+    min-height: 20px;
+    padding-bottom: 3px;
+  }
+  .multiplayer-game-page .room-heading-row {
+    margin-bottom: 5px;
+  }
+  .multiplayer-game-page .room-heading-row h1 {
+    font-size: 21px;
+  }
+  .multiplayer-game-page .room-heading-row p {
+    font-size: 9px;
+  }
+  .multiplayer-game-page .room-game-toolbar {
+    min-height: 26px;
+  }
+}

@@ -1328,3 +1328,70 @@ h2 {
     display: inline-flex;
   }
 }
+
+/* Active puzzles use a compact gallery header to leave room for the table. */
+body:has(.solo-game, .multiplayer-game-page) .site-header {
+  height: 70px;
+}
+body:has(.solo-game, .multiplayer-game-page) .navigation {
+  top: 100%;
+}
+body:has(.solo-game, .multiplayer-game-page) .site-footer {
+  margin-top: 20px;
+}
+@media (max-width: 680px) {
+  body:has(.solo-game, .multiplayer-game-page) .site-header {
+    height: 58px;
+  }
+  .hero h1 {
+    font-size: clamp(42px, 13vw, 61px);
+    letter-spacing: -2.8px;
+  }
+  .section-heading > div,
+  .footer-top > p {
+    min-width: 0;
+  }
+  .header-join,
+  .menu-toggle.icon-button {
+    min-height: 44px;
+  }
+  .menu-toggle.icon-button {
+    min-width: 38px;
+  }
+  .category-tabs button {
+    min-height: 40px;
+  }
+}
+@media (max-width: 360px) {
+  .header-inner {
+    gap: 7px;
+  }
+  .brand {
+    font-size: 17px;
+    gap: 7px;
+  }
+  .brand > svg {
+    width: 23px;
+    height: 23px;
+  }
+  .header-join {
+    gap: 4px;
+    font-size: 9px;
+  }
+  .collection-all {
+    max-width: 95px;
+  }
+}
+@media (max-height: 500px) and (min-width: 600px) {
+  body:has(.solo-game, .multiplayer-game-page) .site-header {
+    height: 48px;
+  }
+}
+@media (pointer: coarse) and (max-width: 680px) {
+  /* Prevent mobile browsers from zooming the page when a form is focused. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

@@ -109,7 +109,7 @@ export function releasePiece(
   x: number,
   y: number,
 ) {
-  return operation("release_piece", {
+  return operation<boolean>("move_piece", {
     p_game_id: gameId,
     p_index: index,
     p_x: x,
