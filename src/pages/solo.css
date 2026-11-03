@@ -38,7 +38,7 @@
 }
 .solo-art-preview {
   padding: 13px;
-  background: #eeece5;
+  background: #eee3d1;
   border: 1px solid var(--line);
   height: fit-content;
 }
@@ -46,7 +46,7 @@
   width: 100%;
   height: 375px;
   object-fit: contain;
-  background: #e4e2d9;
+  background: #e7dac4;
 }
 .solo-art-label {
   padding: 20px 9px 8px;
@@ -87,7 +87,7 @@
   padding: 15px 10px;
 }
 .difficulty-option.selected {
-  background: #ecece4;
+  background: #eee3d1;
   border-color: #9c9f8e;
 }
 .difficulty-radio {
@@ -195,7 +195,7 @@
 }
 .resume-note {
   padding: 18px 23px;
-  background: #eeeee7;
+  background: #eee3d1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -313,7 +313,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: #20211dcc;
+  background: #29271fcc;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -383,7 +383,7 @@
   margin: 40px auto 0;
   padding: 15px;
   border: 1px solid var(--line);
-  background: #e7e5dd;
+  background: #e7dac4;
   max-height: 550px;
   max-width: 800px;
   width: 100%;

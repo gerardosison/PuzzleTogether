@@ -1,16 +1,18 @@
 :root {
   font-family: "DM Sans Variable", Arial, Helvetica, sans-serif;
-  color: #252622;
-  background: #f8f7f4;
+  color: #2e3027;
+  background: var(--paper);
   font-synthesis: none;
   font-weight: 400;
   font-size: 15px;
   line-height: 1.5;
-  --paper: #f8f7f4;
-  --ink: #252622;
-  --muted: #77786f;
-  --line: #dcdcd5;
-  --panel: #eeeee8;
+  --paper: #f5eddf;
+  --ink: #2e3027;
+  --muted: #706b5b;
+  --line: #d9cbb6;
+  --panel: #eee3d1;
+  --surface: #faf5eb;
+  --accent: #765c37;
 }
 * {
   box-sizing: border-box;
@@ -61,13 +63,13 @@ svg {
   flex-shrink: 0;
 }
 ::selection {
-  background: #d7d6ce;
+  background: #ded0b9;
 }
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #252622;
+  outline: 2px solid #2e3027;
   outline-offset: 5px;
 }
 .page-shell {
@@ -149,7 +151,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 24px;
-  border: 1px solid #b4b5ac;
+  border: 1px solid #b7a58b;
   padding: 10px 16px;
   font-size: 12px;
 }
@@ -198,7 +200,7 @@ select:focus-visible {
   font-weight: 500;
 }
 .hero-description {
-  color: #75766e;
+  color: var(--muted);
   font-size: 14px;
   line-height: 1.85;
   margin: 0;
@@ -235,14 +237,14 @@ select:focus-visible {
   border-color: var(--ink);
 }
 .button-dark:hover {
-  background: #44453d;
+  background: #454b3c;
 }
 .button-outline {
   background: transparent;
-  border-color: #b4b5ac;
+  border-color: #b7a58b;
 }
 .button-outline:hover {
-  background: #e9e8e1;
+  background: #e7dac4;
 }
 .text-link {
   display: inline-flex;
@@ -296,10 +298,10 @@ select:focus-visible {
 .exhibit-image {
   position: relative;
   height: 407px;
-  background: #e6e4de;
+  background: var(--panel);
   padding: 13px;
-  border: 1px solid #d6d4ca;
-  box-shadow: 5px 7px 0 #eeede8;
+  border: 1px solid var(--line);
+  box-shadow: 5px 7px 0 var(--panel);
 }
 .exhibit-image > img {
   height: 100%;
@@ -312,7 +314,7 @@ select:focus-visible {
   position: absolute;
   width: 14px;
   height: 14px;
-  border-color: #f8f7f4;
+  border-color: #f5eddf;
 }
 .corner-tl {
   top: 26px;
@@ -421,9 +423,9 @@ h2 {
   margin-left: -1px;
 }
 .category-tabs button.active {
-  border-color: #a6a89a;
+  border-color: var(--accent);
   color: var(--ink);
-  background: #eeeee7;
+  background: #eee3d1;
 }
 .category-tabs button:hover {
   color: var(--ink);
@@ -444,7 +446,7 @@ h2 {
 .artwork-image {
   position: relative;
   height: 245px;
-  background: #e3e1d8;
+  background: var(--panel);
   overflow: hidden;
 }
 .artwork-image > img {
@@ -522,7 +524,7 @@ h2 {
   grid-template-columns: repeat(3, 1fr);
 }
 .how-section {
-  background: #272923;
+  background: #30372d;
   color: #f3f3e9;
 }
 .how-inner {
@@ -775,7 +777,7 @@ h2 {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.8;
-  background: #eeeee7;
+  background: #eee3d1;
   padding: 17px 20px;
   border: 1px solid var(--line);
 }

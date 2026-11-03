@@ -1,12 +1,12 @@
 # PuzzleTogether
 
-A shared jigsaw table, styled like a quiet museum visit. The interface uses off-white and black, square edges, plain typography, exhibit labels, and artwork-led layouts. No decorative gradients, invented engagement metrics, or equal-weight dashboard tiles.
+A shared jigsaw table, styled like a quiet museum visit. The interface uses warm cream, olive-charcoal text, and brown borders, square edges, plain typography, exhibit labels, and artwork-led layouts. No decorative gradients, invented engagement metrics, or equal-weight dashboard tiles.
 
 For downloading this feature branch and updating an existing laptop copy, see [UPDATE_GUIDE.md](UPDATE_GUIDE.md).
 
 ## Run locally
 
-Requires Node.js 22.12+ (validated with Node 24) and npm.
+Node.js 24 LTS and npm are recommended (the updated tools also support Node 22.13+ and 26+).
 
 ```sh
 npm ci
@@ -75,7 +75,7 @@ Piece locks last 10 seconds and renew every 4 seconds while dragging. Room clien
 
 ```sh
 npm run lint         # ESLint and hook rules
-npm test             # 14 geometry, snap, bounds, and fitted-table checks
+npm test             # 27 geometry, layout, and public-configuration checks
 npm run test:db      # 81 PostgreSQL game-rule/security assertions
 npm run build        # TypeScript check and production bundle
 npm run test:e2e     # 19 Chromium flows including real mouse/touch dragging
@@ -84,6 +84,8 @@ npm run test:e2e     # 19 Chromium flows including real mouse/touch dragging
 The database tests apply all real migrations in order inside PGlite with pgcrypto and small stubs of Supabase-owned schemas. They test the application SQL, not Supabase Auth, Storage APIs, hosted Realtime authorization, actual parallel transactions, or network behavior. They cover access rejection, direct mutation rejection, readiness, capacity, all difficulty counts, locks/expiry, placement validation, duplicate scoring, completion, snapshots, and host grace/transfer.
 
 Playwright defaults to `/usr/bin/chromium` in this cloud machine. Elsewhere run `npx playwright install chromium` and set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to your installed browser path (or adjust the config to use Playwright's bundled browser). The test runner starts Vite when no server is running.
+
+Security measures and verification limits are documented in [SECURITY.md](SECURITY.md). For local edits, About-page hot reload, and commands to merge the feature branch into main, see [POLISH_GUIDE.md](POLISH_GUIDE.md).
 
 ## Deploy
 

@@ -7,10 +7,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #d7d5ce;
+  border-bottom: 1px solid #d9cbb6;
   padding: 12px 0;
   font-size: 12px;
-  color: #6c6b66;
+  color: #706b5b;
 }
 .puzzle-toolbar button {
   display: inline-flex;
@@ -19,7 +19,7 @@
   border: 0;
   background: none;
   font: inherit;
-  color: #252523;
+  color: #2e3027;
   cursor: pointer;
   padding: 8px 0 8px 8px;
 }
@@ -30,8 +30,8 @@
 .puzzle-error {
   padding: 80px 20px;
   text-align: center;
-  background: #eeede9;
-  color: #66635c;
+  background: #eee3d1;
+  color: #706b5b;
 }
 .puzzle-error {
   color: #6d2424;
@@ -42,7 +42,7 @@
   align-items: end;
   padding: 18px 0;
   font-size: 12px;
-  color: #77756f;
+  color: #706b5b;
 }
 .puzzle-reference img {
   width: 160px;
@@ -54,13 +54,13 @@
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  border-top: 1px solid #d7d5ce;
+  border-top: 1px solid #d9cbb6;
   margin-top: 8px;
   padding-top: 12px;
 }
 .puzzle-table-footer p {
   font-size: 12px;
-  color: #6c6b66;
+  color: #706b5b;
   line-height: 1.5;
 }
 .puzzle-pagination {
@@ -71,7 +71,7 @@
   font-size: 12px;
 }
 .puzzle-pagination button {
-  border: 1px solid #cccac4;
+  border: 1px solid #b7a58b;
   background: none;
   width: 30px;
   height: 30px;
@@ -85,7 +85,7 @@
 }
 .puzzle-keyboard {
   margin-top: 22px;
-  border-top: 1px solid #d7d5ce;
+  border-top: 1px solid #d9cbb6;
   padding-top: 16px;
   font-size: 12px;
 }
@@ -97,7 +97,7 @@
 .puzzle-keyboard p {
   max-width: 500px;
   line-height: 1.7;
-  color: #6c6b66;
+  color: #706b5b;
 }
 .puzzle-piece-select {
   display: flex;
@@ -115,8 +115,8 @@
   cursor: pointer;
 }
 .puzzle-piece-select button[aria-pressed="true"] {
-  border-color: #171716;
-  outline: 2px solid #f8f7f4;
+  border-color: #2e3027;
+  outline: 2px solid #f5eddf;
   outline-offset: -4px;
 }
 .puzzle-piece-select button span {
@@ -124,9 +124,9 @@
   bottom: 0;
   right: 0;
   padding: 2px 4px;
-  background: #f8f7f4;
+  background: #f5eddf;
   font-size: 9px;
-  color: #171716;
+  color: #2e3027;
 }
 .puzzle-keyboard-controls {
   display: flex;
@@ -141,17 +141,17 @@
 }
 .puzzle-keyboard-controls select {
   width: 80px;
-  background: #f8f7f4;
-  border: 1px solid #c5c2b9;
+  background: #f5eddf;
+  border: 1px solid #b7a58b;
   border-radius: 0;
   padding: 10px;
   font: inherit;
 }
 .puzzle-keyboard-controls button {
   padding: 11px 16px;
-  border: 1px solid #171716;
-  background: #171716;
-  color: #f8f7f4;
+  border: 1px solid #2e3027;
+  background: #2e3027;
+  color: #f5eddf;
   font: inherit;
   cursor: pointer;
 }
@@ -182,7 +182,7 @@
   line-height: 0;
   width: 100%;
   overflow: hidden;
-  background: #f8f7f4;
+  background: #f5eddf;
   isolation: isolate;
 }
 .puzzle-reference {
@@ -191,7 +191,7 @@
   left: 12px;
   max-width: min(220px, 45%);
   padding: 10px;
-  background: #f8f7f4;
+  background: #f5eddf;
   box-shadow: 0 2px 12px #0002;
   display: flex;
   flex-direction: column;
@@ -249,7 +249,7 @@
 }
 .puzzle-keyboard-controls .return-to-tray {
   background: none;
-  color: #252622;
+  color: #2e3027;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -442,8 +442,8 @@ export default function PuzzleBoard({
             <Layer>
               <Rect
                 {...board}
-                fill="#efeeeb"
-                stroke="#b9b8b2"
+                fill="#eee3d1"
+                stroke="#b7a58b"
                 strokeWidth={1}
               />
               {Array.from({ length: columns - 1 }, (_, i) => (
@@ -455,7 +455,7 @@ export default function PuzzleBoard({
                     board.x + (i + 1) * pieceWidth,
                     board.y + board.height,
                   ]}
-                  stroke="#d8d7d0"
+                  stroke="#d9cbb6"
                   strokeWidth={0.7}
                   dash={[3, 5]}
                   listening={false}
@@ -470,7 +470,7 @@ export default function PuzzleBoard({
                     board.x + board.width,
                     board.y + (i + 1) * pieceHeight,
                   ]}
-                  stroke="#d8d7d0"
+                  stroke="#d9cbb6"
                   strokeWidth={0.7}
                   dash={[3, 5]}
                   listening={false}
@@ -491,8 +491,8 @@ export default function PuzzleBoard({
               )}
               <Rect
                 {...tray}
-                fill="#f1f0eb"
-                stroke="#dedbd3"
+                fill="#f2e8d8"
+                stroke="#d9cbb6"
                 strokeWidth={0.7}
                 listening={false}
               />
@@ -554,7 +554,7 @@ export default function PuzzleBoard({
                       draggable={
                         !isPlaced && !lockedElsewhere(piece.index) && !busy
                       }
-                      stroke={selected === piece.index ? "#171716" : "#f7f6f2"}
+                      stroke={selected === piece.index ? "#2e3027" : "#faf5eb"}
                       strokeWidth={isPlaced ? 0.45 : 1.2}
                       opacity={lockedElsewhere(piece.index) ? 0.6 : 1}
                       shadowColor="#000"

@@ -20,7 +20,11 @@ import {
 import { artworks } from "../data/artworks";
 import { DIFFICULTIES } from "../lib/types";
 import type { Difficulty } from "../lib/types";
-import { ensureGuest, isSupabaseConfigured } from "../lib/supabase";
+import {
+  ensureGuest,
+  isSupabaseConfigured,
+  supabaseSetupMessage,
+} from "../lib/supabase";
 import {
   claimPiece,
   createRoom,
@@ -57,8 +61,7 @@ function SetupNotice() {
     <aside className="room-setup-note">
       <strong>The multiplayer gallery is not connected yet.</strong>
       <p>
-        Private rooms need a configured Supabase project. In the meantime, you
-        can play every artwork on your own.
+        {supabaseSetupMessage} You can still play every artwork on your own.
       </p>
       <Link className="text-link" to="/solo">
         Take a solo seat <ArrowRight size={15} />

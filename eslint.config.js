@@ -19,7 +19,9 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { "react-hooks": hooks, "react-refresh": refresh },
     rules: {
-      ...hooks.configs.recommended.rules,
+      // Preserve the hook checks used before upgrading the plugin.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "react-refresh/only-export-components": [
         "warn",
         { allowConstantExport: true },

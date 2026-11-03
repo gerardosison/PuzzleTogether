@@ -3,7 +3,7 @@
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: #777970;
+  color: #706b5b;
   text-decoration: none;
   margin-bottom: 56px;
 }
@@ -31,14 +31,14 @@
 .room-entry-intro > p:not(.eyebrow) {
   max-width: 335px;
   font-size: 15px;
-  color: #777970;
+  color: #706b5b;
   line-height: 1.8;
 }
 .room-entry-footnote {
   display: flex;
   align-items: center;
   gap: 23px;
-  border-top: 1px solid #dcdcd5;
+  border-top: 1px solid #d9cbb6;
   margin-top: 55px;
   padding-top: 25px;
 }
@@ -50,7 +50,7 @@
 .room-entry-footnote > p {
   font-size: 12px;
   line-height: 1.6;
-  color: #777970;
+  color: #706b5b;
 }
 .room-entry-form {
   padding: 36px 0 0;
@@ -67,12 +67,12 @@
   width: 100%;
   box-sizing: border-box;
   padding: 15px 14px;
-  border: 1px solid #c5c6be;
+  border: 1px solid #b7a58b;
   border-radius: 0;
   background: transparent;
   font: inherit;
   font-size: 14px;
-  color: #232522;
+  color: #2e3027;
   outline-offset: 3px;
   margin-top: 10px;
 }
@@ -84,7 +84,7 @@
   display: block;
   font-size: 11px;
   margin-top: 8px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-code-input {
   letter-spacing: 7px;
@@ -118,7 +118,7 @@
 }
 .room-selected-art small {
   font-size: 11px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-selected-art .eyebrow {
   font-size: 9px;
@@ -132,11 +132,11 @@
   background: #f5f0ec;
 }
 .room-setup-note {
-  border-top: 1px solid #dcdcd5;
+  border-top: 1px solid #d9cbb6;
   padding-top: 22px;
   margin-top: 28px;
   font-size: 12px;
-  color: #777970;
+  color: #706b5b;
   line-height: 1.7;
 }
 .room-setup-note strong {
@@ -147,15 +147,15 @@
   margin: 8px 0 14px;
 }
 .room-entry-switch {
-  border-top: 1px solid #dcdcd5;
+  border-top: 1px solid #d9cbb6;
   margin-top: 28px;
   padding-top: 22px;
   font-size: 11px;
   line-height: 1.8;
-  color: #777970;
+  color: #706b5b;
 }
 .room-entry-switch a {
-  color: #232522;
+  color: #2e3027;
   white-space: nowrap;
   text-decoration: none;
   display: inline-flex;
@@ -165,7 +165,7 @@
 }
 .room-privacy {
   font-size: 10px;
-  color: #777970;
+  color: #706b5b;
   line-height: 1.7;
   max-width: 290px;
   margin-top: 26px;
@@ -190,7 +190,7 @@
   font-size: 40px;
 }
 .room-state-page p {
-  color: #777970;
+  color: #706b5b;
   line-height: 1.8;
   margin-bottom: 28px;
 }
@@ -202,7 +202,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #dcdcd5;
+  border-bottom: 1px solid #d9cbb6;
   padding-bottom: 20px;
   margin: 32px 0;
 }
@@ -232,7 +232,7 @@
 }
 .room-heading-row p {
   font-size: 13px;
-  color: #777970;
+  color: #706b5b;
   line-height: 1.8;
   margin: 0;
 }
@@ -248,7 +248,7 @@
   gap: 7%;
 }
 .lobby-art-frame {
-  background: #eae9e3;
+  background: #eee3d1;
   padding: 35px;
 }
 .lobby-art-frame > img {
@@ -257,7 +257,7 @@
   width: 100%;
   object-fit: contain;
   background: #fff;
-  box-shadow: 0 3px 10px #23252212;
+  box-shadow: 0 3px 10px #2e302712;
   border: 10px solid white;
   box-sizing: border-box;
 }
@@ -275,7 +275,7 @@
 }
 .room-art-caption p {
   font-size: 12px;
-  color: #777970;
+  color: #706b5b;
   margin: 0;
 }
 .room-piece-label {
@@ -290,8 +290,8 @@
   margin-top: 4px;
 }
 .room-art-picker {
-  border-top: 1px solid #dcdcd5;
-  border-bottom: 1px solid #dcdcd5;
+  border-top: 1px solid #d9cbb6;
+  border-bottom: 1px solid #d9cbb6;
 }
 .room-art-picker > summary {
   list-style: none;
@@ -317,7 +317,7 @@
   cursor: pointer;
 }
 .room-art-options > button[aria-pressed="true"] {
-  border-color: #232522;
+  border-color: #2e3027;
 }
 .room-art-options img {
   width: 100%;
@@ -336,13 +336,13 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  background: #f8f7f4;
+  background: #f5eddf;
 }
 .lobby-controls {
   padding-top: 2px;
 }
 .lobby-invite {
-  border-bottom: 1px solid #dcdcd5;
+  border-bottom: 1px solid #d9cbb6;
   padding-bottom: 27px;
 }
 .room-code-row {
@@ -368,7 +368,7 @@
 }
 .lobby-people {
   padding: 27px 0 16px;
-  border-bottom: 1px solid #dcdcd5;
+  border-bottom: 1px solid #d9cbb6;
 }
 .room-section-heading {
   display: flex;
@@ -377,7 +377,7 @@
 }
 .room-section-heading > span {
   font-size: 11px;
-  color: #777970;
+  color: #706b5b;
 }
 .lobby-people ul {
   list-style: none;
@@ -396,7 +396,7 @@
   justify-content: center;
   width: 34px;
   height: 37px;
-  border: 1px solid #c5c6be;
+  border: 1px solid #b7a58b;
   position: relative;
   font-size: 15px;
 }
@@ -412,7 +412,7 @@
   position: absolute;
   right: -3px;
   bottom: 1px;
-  border: 2px solid #f8f7f4;
+  border: 2px solid #f5eddf;
 }
 .room-player-avatar > i.online,
 .room-inline-player > i.online {
@@ -424,7 +424,7 @@
 }
 .room-player-name > small:not(:first-child) {
   font-size: 10px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-player-name > small:last-child {
   display: block;
@@ -432,7 +432,7 @@
 }
 .room-player-state {
   font-size: 8px;
-  color: #777970;
+  color: #706b5b;
   letter-spacing: 1px;
   display: inline-flex;
   gap: 4px;
@@ -443,7 +443,7 @@
   gap: 10px;
   font-size: 11px;
   line-height: 1.7;
-  color: #777970;
+  color: #706b5b;
   margin-top: 15px;
 }
 .lobby-difficulty {
@@ -456,19 +456,19 @@
 }
 .room-difficulty-options > button {
   padding: 15px 5px;
-  border: 1px solid #dcdcd5;
+  border: 1px solid #d9cbb6;
   background: transparent;
-  color: #777970;
+  color: #706b5b;
   cursor: pointer;
   text-align: center;
   margin-right: -1px;
   font-family: inherit;
 }
 .room-difficulty-options > button[aria-pressed="true"] {
-  border: 1px solid #232522;
-  color: #232522;
+  border: 1px solid #2e3027;
+  color: #2e3027;
   z-index: 1;
-  background: #efeee8;
+  background: #eee3d1;
 }
 .room-difficulty-options > button:disabled {
   cursor: default;
@@ -488,7 +488,7 @@
   font-size: 8px;
 }
 .room-start-note {
-  color: #777970;
+  color: #706b5b;
   font-size: 10px;
   line-height: 1.7;
   text-align: center;
@@ -509,24 +509,24 @@
 }
 .room-game-numbers strong > span {
   font-size: 15px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-game-numbers small {
   display: block;
   font-size: 8px;
   letter-spacing: 1px;
   margin-top: 8px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-game-progress {
   height: 2px;
-  background: #dcdcd5;
+  background: #d9cbb6;
   margin-top: -14px;
 }
 .room-game-progress > span {
   display: block;
   height: 100%;
-  background: #232522;
+  background: #2e3027;
   transition: width 0.3s;
 }
 .room-game-toolbar {
@@ -561,7 +561,7 @@
   top: 60px;
   width: 260px;
   border: 12px solid white;
-  box-shadow: 0 4px 20px #23252220;
+  box-shadow: 0 4px 20px #2e302720;
   z-index: 5;
 }
 .room-dismiss-error {
@@ -578,7 +578,7 @@
   color: inherit;
 }
 .room-game-bottom {
-  border-top: 1px solid #dcdcd5;
+  border-top: 1px solid #d9cbb6;
   margin-top: 30px;
   padding-top: 18px;
   display: flex;
@@ -587,7 +587,7 @@
 }
 .room-game-bottom > p {
   font-size: 11px;
-  color: #777970;
+  color: #706b5b;
 }
 .room-results-page {
   padding-top: 60px;
@@ -605,7 +605,7 @@
   margin: 25px 0;
 }
 .room-results-intro > p:last-child {
-  color: #777970;
+  color: #706b5b;
   font-size: 13px;
   line-height: 1.8;
 }
@@ -620,14 +620,14 @@
 }
 .room-finished-frame {
   padding: 35px;
-  background: #eae9e3;
+  background: #eee3d1;
 }
 .room-finished-frame > img {
   width: 100%;
   display: block;
   border: 12px solid #fff;
   box-sizing: border-box;
-  box-shadow: 0 4px 12px #23252214;
+  box-shadow: 0 4px 12px #2e302714;
 }
 .room-results-layout figcaption {
   display: flex;
@@ -640,12 +640,12 @@
   font-weight: 500;
 }
 .room-results-layout figcaption span {
-  color: #777970;
+  color: #706b5b;
 }
 .room-results-totals {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid #dcdcd5;
+  border-bottom: 1px solid #d9cbb6;
   padding-bottom: 27px;
   margin-bottom: 28px;
 }
@@ -659,7 +659,7 @@
   display: block;
   font-size: 8px;
   letter-spacing: 1.1px;
-  color: #777970;
+  color: #706b5b;
   margin-top: 9px;
 }
 .room-contributions {
@@ -671,7 +671,7 @@
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  border-bottom: 1px solid #dcdcd5;
+  border-bottom: 1px solid #d9cbb6;
   padding: 13px 0;
   font-size: 12px;
 }
@@ -679,7 +679,7 @@
   font-weight: 500;
 }
 .room-contributions small {
-  color: #777970;
+  color: #706b5b;
   font-weight: 400;
   font-size: 10px;
 }
