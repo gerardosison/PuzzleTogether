@@ -26,7 +26,7 @@ Run each command from the project directory. Stop and resolve any reported confl
 
 ```powershell
 git switch feature/freeform-responsive-puzzles
-git pull --ff-only origin feature/freeform-responsive-puzzles
+git pull --rebase origin feature/freeform-responsive-puzzles
 git switch main
 git pull --ff-only origin main
 git merge feature/freeform-responsive-puzzles
@@ -35,6 +35,8 @@ npm run build
 git push origin main
 npm run dev
 ```
+
+The feature-branch pull rebases your saved local commits onto the updates from GitHub. If a conflict appears, Git pauses with your commits retained; resolve it before continuing.
 
 The merge includes the responsive/freeform puzzle changes plus the cream palette and security updates. Use Node.js 24 LTS; the updated tools support Node 22.13+, 24.x, and 26+. Your untracked `.env.local` stays in this checkout when switching branches. No SQL migration was changed in this polish update; both existing migrations are still required for a fresh Supabase project.
 
